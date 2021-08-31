@@ -281,8 +281,6 @@ func (r RawRequest) GetTimeout() time.Duration {
 func Do(req Requester) (*Response, error) {
 	var conn io.ReadWriter
 	var connerr error
-	var dialer net.Dialer
-        dialer.Timeout = req.GetTimeout()
 
 	// This needs timeouts because it's fairly likely
 	// that something will go wrong :)
@@ -291,13 +289,21 @@ func Do(req Requester) (*Response, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		// This library is meant for doing stupid stuff, so skipping cert
 		// verification is actually the right thing to do
 		conf := &tls.Config{RootCAs: roots, InsecureSkipVerify: true}
-		conn, connerr = tls.DialWithDialer(&dialer, "tcp", req.Host(), conf)
+
+		connx, connerrx := tls.DialWithDialer(&net.Dialer{
+			Timeout: req.GetTimeout(),
+		}, "tcp", req.Host(), conf)
+		connx.SetDeadline(time.Now().Add(req.GetTimeout()))
+		conn = connx
+		connerr = connerrx
 	} else {
-		conn, connerr = dialer.Dial("tcp", req.Host())
+		connx, connerrx := net.DialTimeout("tcp", req.Host(),req.GetTimeout())
+		connx.SetDeadline(time.Now().Add(req.GetTimeout()))
+		conn = connx
+		connerr = connerrx
 	}
 
 	if connerr != nil {
