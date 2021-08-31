@@ -279,7 +279,7 @@ func (r RawRequest) GetTimeout() time.Duration {
 // Do performs the HTTP request for the given Requester and returns
 // a *Response and any error that occured
 func Do(req Requester) (*Response, error) {
-	var conn io.ReadWriter
+	var conn net.Conn
 	var connerr error
 
 	// This needs timeouts because it's fairly likely
@@ -293,22 +293,19 @@ func Do(req Requester) (*Response, error) {
 		// verification is actually the right thing to do
 		conf := &tls.Config{RootCAs: roots, InsecureSkipVerify: true}
 
-		connx, connerrx := tls.DialWithDialer(&net.Dialer{
+		conn, connerr = tls.DialWithDialer(&net.Dialer{
 			Timeout: req.GetTimeout(),
 		}, "tcp", req.Host(), conf)
-		connx.SetDeadline(time.Now().Add(req.GetTimeout()))
-		conn = connx
-		connerr = connerrx
 	} else {
-		connx, connerrx := net.DialTimeout("tcp", req.Host(),req.GetTimeout())
-		connx.SetDeadline(time.Now().Add(req.GetTimeout()))
-		conn = connx
-		connerr = connerrx
+		conn, connerr = net.DialTimeout("tcp", req.Host(),req.GetTimeout())
 	}
 
 	if connerr != nil {
 		return nil, connerr
 	}
+
+	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(req.GetTimeout()))
 
 	fmt.Fprint(conn, req.String())
 	fmt.Fprint(conn, "\r\n")
