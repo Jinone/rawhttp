@@ -294,11 +294,11 @@ func Do(req Requester) (*Response, error) {
 		// verification is actually the right thing to do
 		conf := &tls.Config{RootCAs: roots, InsecureSkipVerify: true}
 		conn, connerr = tls.DialWithDialer(&net.Dialer{
-			Timeout: req.GetTimeout(),
+			Timeout: 15 *time.Second,
 		}, "tcp", req.Host(), conf)
 
 	} else {
-		d := net.Dialer{Timeout: req.GetTimeout()}
+		d := net.Dialer{Timeout: 15 *time.Second}
 		conn, connerr = d.Dial("tcp", req.Host())
 	}
 
