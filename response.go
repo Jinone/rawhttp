@@ -63,7 +63,7 @@ func (r Response) StatusLine() string {
 // StatusCode returns the HTTP status code as a string; e.g. 200
 func (r Response) StatusCode() string {
 	parts := strings.SplitN(r.rawStatus, " ", 3)
-	if len(parts) != 3 {
+	if len(parts) != 3 && len(parts) != 2 {
 		return ""
 	}
 
