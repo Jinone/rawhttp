@@ -109,7 +109,7 @@ func FromURL(method, rawurl string) (*Request, error) {
 	r.Port = u.Port()
 	r.Path = path
 	r.Query = u.RawQuery
-	r.Fragment = u.Fragment
+	r.Fragment = u.RawFragment
 	r.Proto = "HTTP/1.1"
 	r.EOL = "\r\n"
 	r.Timeout = time.Second * 30
