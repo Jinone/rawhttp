@@ -117,7 +117,7 @@ func newResponse(conn io.Reader) (*Response, error) {
 			return nil, err
 		}
 
-		if length > 0 {
+		if length > 0 && length != 9223372036854775807 {
 			b := make([]byte, length)
 			_, err = io.ReadAtLeast(r, b, length)
 			if err != nil {
