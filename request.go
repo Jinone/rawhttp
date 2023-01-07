@@ -292,11 +292,46 @@ func Do(req Requester) (*Response, error) {
 		return nil, connerr
 	}
 
-	defer conn.Close()
+	fmt.Fprint(conn, req.String())
+	fmt.Fprint(conn, "\r\n")
+
 	conn.SetDeadline(time.Now().Add(req.GetTimeout()))
+	defer conn.Close()
+
+	return newResponse(conn)
+}
+
+func DoWithSni(sni string,req Requester) (*Response, error) {
+	var conn net.Conn
+	var connerr error
+
+	// This needs timeouts because it's fairly likely
+	// that something will go wrong :)
+	if req.IsTLS() {
+		roots, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, err
+		}
+		// This library is meant for doing stupid stuff, so skipping cert
+		// verification is actually the right thing to do
+		conf := &tls.Config{RootCAs: roots, InsecureSkipVerify: true,ServerName: sni}
+
+		conn, connerr = tls.DialWithDialer(&net.Dialer{
+			Timeout: req.GetTimeout(),
+		}, "tcp", req.Host(), conf)
+	} else {
+		conn, connerr = net.DialTimeout("tcp", req.Host(),req.GetTimeout())
+	}
+
+	if connerr != nil {
+		return nil, connerr
+	}
 
 	fmt.Fprint(conn, req.String())
 	fmt.Fprint(conn, "\r\n")
+
+	conn.SetDeadline(time.Now().Add(req.GetTimeout()))
+	defer conn.Close()
 
 	return newResponse(conn)
 }
