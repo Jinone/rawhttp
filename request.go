@@ -27,6 +27,13 @@ type Requester interface {
 	GetTimeout() time.Duration
 }
 
+type CusRequester struct {
+	IsTLS bool
+	Host string
+	String string
+	Timeout time.Duration
+}
+
 // Request is the main implementation of Requester. It gives you
 // fine-grained control over just about everything to do with the
 // request, but with the posibility of sane defaults.
@@ -296,6 +303,41 @@ func Do(req Requester) (*Response, error) {
 	fmt.Fprint(conn, "\r\n")
 
 	conn.SetDeadline(time.Now().Add(req.GetTimeout()))
+	defer conn.Close()
+
+	return newResponse(conn)
+}
+
+func DoWithCus(req CusRequester) (*Response, error) {
+	var conn net.Conn
+	var connerr error
+
+	// This needs timeouts because it's fairly likely
+	// that something will go wrong :)
+	if req.IsTLS {
+		roots, err := x509.SystemCertPool()
+		if err != nil {
+			return nil, err
+		}
+		// This library is meant for doing stupid stuff, so skipping cert
+		// verification is actually the right thing to do
+		conf := &tls.Config{RootCAs: roots, InsecureSkipVerify: true}
+
+		conn, connerr = tls.DialWithDialer(&net.Dialer{
+			Timeout: req.Timeout,
+		}, "tcp", req.Host, conf)
+	} else {
+		conn, connerr = net.DialTimeout("tcp", req.Host,req.Timeout)
+	}
+
+	if connerr != nil {
+		return nil, connerr
+	}
+
+	fmt.Fprint(conn, req.String)
+	fmt.Fprint(conn, "\r\n")
+
+	conn.SetDeadline(time.Now().Add(req.Timeout))
 	defer conn.Close()
 
 	return newResponse(conn)
